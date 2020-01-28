@@ -1,7 +1,7 @@
 # Onboards an AWS Account with the following charasterictics
 # Name: $AccountName
 # Environment: $Environment
-# Requirements: CC API Key and Secret
+# Requirements: CC API Secret
 #               AWS CLI configured with a named profile (keys and region)
 #               Access to AWS services as described at https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
 
@@ -14,11 +14,16 @@ if ! command -v aws >/dev/null 2>&1; then
   exit 1
 fi
 
+# CC API Secret which can be obtained from the Administration menu
 CCAPIKey="$1"
+# CC Endpoint Region: Choice of eu-west-1, ap-southeast-2 or us-west-2
 CCEndpoint="$2"
+# AWS CLI named profile
 AWSProfile="$3"
+# Name to be used in CC to identify the account
 AccountName="$4"
 Environment="$5"
+
 echo "Adding the AWS account ${AccountName} - ${Environment} environment to Cloud Conformity (${CCEndpoint}) using the AWS CLI named profile ${AWSProfile}."
 echo "See https://github.com/cloudconformity/documentation-api/blob/master/Accounts.md for additional details."
 
@@ -26,6 +31,7 @@ echo "See https://github.com/cloudconformity/documentation-api/blob/master/Accou
 echo "Getting your organization's Cloud Conformity ExternalId."
 response=$(curl -s -X GET -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpoint}-api.cloudconformity.com/v1/organisation/external-id)
 ExternalId=$(jq -r '.data.id' <<<"${response}")
+echo "Your Organization's External ID is ${ExternalId}."
 
 # configure the AWS CLI
 export AWS_PROFILE=${AWSProfile}
