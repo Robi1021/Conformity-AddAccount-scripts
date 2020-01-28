@@ -14,11 +14,15 @@ You will need the following:
 
 zsh AddAccount.zsh <CCAPISecret> <CCEndpointRegion> <AWSNamedProfile> <AccountName> <Environment>
 
-CCAPISecret: Obtain one from the Administration console and ensure it has sufficient rights to add accounts.
-CCEndpointRegion: Choice of eu-west-1, ap-southeast-2 or us-west-2.
-AWSNamedProfile: The name of an AWS CLI Profile with sufficient rights and access to services.
-AccountName: Name that will be used to identify the account in Cloud Conformity
-Environment: Environment Tag.
+    CCAPISecret: Obtain one from the Administration console and ensure it has sufficient rights to add accounts.
+
+    CCEndpointRegion: Choice of eu-west-1, ap-southeast-2 or us-west-2.
+
+    AWSNamedProfile: The name of an AWS CLI Profile with sufficient rights and access to services.
+
+    AccountName: Name that will be used to identify the account in Cloud Conformity
+
+    Environment: Environment Tag.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
