@@ -88,9 +88,11 @@ CCAccountId=$(jq -r '.data.id' <<<"${response}")
 CCOrganisationId=$(jq -r '.data.relationships.organisation.data.id' <<<"${response}")
 
 # if either of AWSAccountID, CCAcountID or CCOrganisationID is empty stop
-if [[ "${AWSAccountId}" = "" ]]; then
+# if [[ "${AWSAccountId}" = "" ]]; then
+# echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAccountId}, Organization ID ${CCOrganisationId}."
+# fi
+
 echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAccountId}, Organization ID ${CCOrganisationId}."
-fi
 
 echo "Enabling real-time monitoring."
 # Enable RTM in the account. See https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
