@@ -1,49 +1,64 @@
-# Onboards an AWS Account with the following charasterictics
-# Name: $AccountName
-# Environment: $Environment
-# Requirements: CC API Secret
-#               AWS CLI configured with a named profile (keys and region)
-#               Access to AWS services as described at https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
+# Adds an AWS Account to Cloud Conformity with the following charasterictics:
+#   Name: $AccountName
+#   Environment: $Environment
+#   Cost Optimisation: Enabled
+#   Real-time monitoring: Enabled and Configured
+#   Cloud Conformity Endpoint: Endpoint for the given $CCEndpointRegion
+#
+# Requirements: 
+#   CC API Secret ($CCAPIKey)
+#   AWS CLI configured with a named profile including a default region ($AWSNamedProfile)
+#   Access to AWS services as described at https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
 
 # stop if an error occurs
 set -e
-
-# Checks whether aws command exists - exit if not
-if ! command -v aws >/dev/null 2>&1; then
-  echo "Please install AWS Command Line Interface first: http://docs.aws.amazon.com/cli/latest/userguide/installing.html"
-  exit 1
-fi
+# allow to throw exceptions
+autoload throw catch
 
 # CC API Secret which can be obtained from the Administration menu
 CCAPIKey="$1"
 # CC Endpoint Region: Choice of eu-west-1, ap-southeast-2 or us-west-2
-CCEndpoint="$2"
+CCEndpointRegion="$2"
 # AWS CLI named profile
-AWSProfile="$3"
-# Name to be used in CC to identify the account
+AWSNamedProfile="$3"
+# Name and environment to be used in CC to identify the account
 AccountName="$4"
 Environment="$5"
 
-echo "Adding the AWS account ${AccountName} - ${Environment} environment to Cloud Conformity (${CCEndpoint}) using the AWS CLI named profile ${AWSProfile}."
+# initial set up
+StackId=""
+StackStatus=""
+AWSAccountId=""
+CCAccountId=""
+CCOrganisationId=""
+ExternalId=""
+ARN=""
+payload=""
+response=""
+
+echo "Adding the AWS account ${AccountName} - ${Environment} environment to Cloud Conformity (${CCEndpointRegion}) using the AWS CLI named profile ${AWSNamedProfile}."
 echo "See https://github.com/cloudconformity/documentation-api/blob/master/Accounts.md for additional details."
 
 # Get the External ID. See https://github.com/cloudconformity/documentation-api/blob/master/ExternalId.md#get-organisation-external-id
 echo "Getting your organization's Cloud Conformity ExternalId."
-response=$(curl -s -X GET -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpoint}-api.cloudconformity.com/v1/organisation/external-id)
-ExternalId=$(jq -r '.data.id' <<<"${response}")
+response=$(curl -s -X GET -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpointRegion}-api.cloudconformity.com/v1/organisation/external-id)
+ExternalId=$(jq -r '.data.id?' <<<"${response}")
+
+# if no external ID came back stop.
+if [[ "${ExternalId}" = "" ]]; then
+  throw "Could not retrieve your Organisation's External ID. Stopping now."
+fi
 echo "Your Organization's External ID is ${ExternalId}."
 
 # configure the AWS CLI
-export AWS_PROFILE=${AWSProfile}
+export AWS_PROFILE=${AWSNamedProfile}
 
 # Configure the account - Option2. See https://github.com/cloudconformity/documentation-api/blob/master/Accounts.md#create-an-account
-# and get the ARN
 echo "Creating the Cloud Conformity stack."
 response=$(aws cloudformation create-stack --stack-name CloudConformity --template-url https://s3-us-west-2.amazonaws.com/cloudconformity/CloudConformity.template --parameters ParameterKey=AccountId,ParameterValue=717210094962 ParameterKey=ExternalId,ParameterValue=${ExternalId} --capabilities CAPABILITY_NAMED_IAM)
 StackId=$(jq -r '.StackId' <<<"${response}")
 
 # wait until the CloudConformity cloudformation is provisioned
-StackStatus=""
 while [ "$StackStatus" != "CREATE_COMPLETE" ]; do
     # todo: add timeout.sh
     response=$(aws cloudformation describe-stacks --stack-name CloudConformity)
@@ -54,17 +69,27 @@ done
 echo "The StackID is ${StackId}."
 echo "Getting the ARN."
 response=$(aws cloudformation describe-stacks --stack-name CloudConformity)
-ARN=$(jq -r '.Stacks[0].Outputs[1].OutputValue' <<<"${response}")
+ARN=$(jq -r '.Stacks[0].Outputs[1].OutputValue?' <<<"${response}")
+
+# if no ARN came back stop.
+if [[ "${ARN}" = "" ]]; then
+  throw "Could not retrieve the Cloud Conformity ARN. Stopping now."
+fi
+echo "The ARN is ${ARN}."
 
 # Add the account to CC using the external ID and ARN - Step 3
 echo "Adding the account to Cloud Conformity."
 payload="{\"data\":{\"type\": \"account\",\"attributes\": {\"name\": \"${AccountName}\",\"environment\": \"${Environment}\",\"access\": {\"keys\": {\"roleArn\": \"${ARN}\",\"externalId\": \"${ExternalId}\"}},\"costPackage\": true,\"hasRealTimeMonitoring\": true}}}"
-response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" -d ''${payload}'' https://${CCEndpoint}-api.cloudconformity.com/v1/accounts)
+response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" -d ''${payload}'' https://${CCEndpointRegion}-api.cloudconformity.com/v1/accounts)
 
 AWSAccountId=$(jq -r '.data.attributes["awsaccount-id"]' <<<"${response}")
 CCAccountId=$(jq -r '.data.id' <<<"${response}")
 CCOrganisationId=$(jq -r '.data.relationships.organisation.data.id' <<<"${response}")
+
+# if either of AWSAccountID, CCAcountID or CCOrganisationID is empty stop
+if [[ "${AWSAccountId}" = "" ]]; then
 echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAccountId}, Organization ID ${CCOrganisationId}."
+fi
 
 echo "Enabling real-time monitoring."
 # Enable RTM in the account. See https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
@@ -121,7 +146,7 @@ for region in "${RTM_REGIONS[@]}"; do
   fi
 done
 echo "Scanning the account."
-response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpoint}-api.cloudconformity.com/v1/accounts/${CCAccountId}/scan)
+response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpointRegion}-api.cloudconformity.com/v1/accounts/${CCAccountId}/scan)
 
-echo "The Cloud Conformity bot will continue scanning the AWS Account ${AccountName} in the background."
+echo "The Cloud Conformity bot will continue scanning the AWS Account ${AccountName} - ${Environment} in the background."
 echo "At this point you can visit the dashboard to review."
