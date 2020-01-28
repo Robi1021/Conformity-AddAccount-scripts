@@ -12,8 +12,9 @@
 
 # stop if an error occurs
 set -e
+
 # allow to throw exceptions
-autoload throw catch
+#autoload throw catch
 
 # CC API Secret which can be obtained from the Administration menu
 CCAPIKey="$1"
@@ -45,9 +46,9 @@ response=$(curl -s -X GET -H "Content-Type: application/vnd.api+json" -H "Author
 ExternalId=$(jq -r '.data.id?' <<<"${response}")
 
 # if no external ID came back stop.
-if [[ "${ExternalId}" = "" ]]; then
-  throw "Could not retrieve your Organisation's External ID. Stopping now."
-fi
+# if [[ "${ExternalId}" = "" ]]; then
+#   throw "Could not retrieve your Organisation's External ID. Stopping now."
+# fi
 echo "Your Organization's External ID is ${ExternalId}."
 
 # configure the AWS CLI
@@ -72,9 +73,9 @@ response=$(aws cloudformation describe-stacks --stack-name CloudConformity)
 ARN=$(jq -r '.Stacks[0].Outputs[1].OutputValue?' <<<"${response}")
 
 # if no ARN came back stop.
-if [[ "${ARN}" = "" ]]; then
-  throw "Could not retrieve the Cloud Conformity ARN. Stopping now."
-fi
+# if [[ "${ARN}" = "" ]]; then
+#   throw "Could not retrieve the Cloud Conformity ARN. Stopping now."
+# fi
 echo "The ARN is ${ARN}."
 
 # Add the account to CC using the external ID and ARN - Step 3
