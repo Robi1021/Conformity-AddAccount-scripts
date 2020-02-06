@@ -1,8 +1,8 @@
 # Adds an AWS Account to Cloud Conformity with the following charasterictics:
 #   Name: $AccountName
 #   Environment: $Environment
-#   Cost Optimisation: Enabled
-#   Real-time monitoring: Enabled and Configured
+#   Cost Optimisation: Enabled by default
+#   Real-time monitoring: Enabled and configured by default
 #   Cloud Conformity Endpoint: Endpoint for the given $CCEndpointRegion
 #
 # Requirements: 
@@ -44,11 +44,6 @@ echo "See https://github.com/cloudconformity/documentation-api/blob/master/Accou
 echo "Getting your organization's Cloud Conformity ExternalId."
 response=$(curl -s -X GET -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpointRegion}-api.cloudconformity.com/v1/organisation/external-id)
 ExternalId=$(jq -r '.data.id?' <<<"${response}")
-
-# if no external ID came back stop.
-# if [[ "${ExternalId}" = "" ]]; then
-#   throw "Could not retrieve your Organisation's External ID. Stopping now."
-# fi
 echo "Your Organization's External ID is ${ExternalId}."
 
 # configure the AWS CLI
@@ -71,11 +66,6 @@ echo "The StackID is ${StackId}."
 echo "Getting the ARN."
 response=$(aws cloudformation describe-stacks --stack-name CloudConformity)
 ARN=$(jq -r '.Stacks[0].Outputs[1].OutputValue?' <<<"${response}")
-
-# if no ARN came back stop.
-# if [[ "${ARN}" = "" ]]; then
-#   throw "Could not retrieve the Cloud Conformity ARN. Stopping now."
-# fi
 echo "The ARN is ${ARN}."
 
 # Add the account to CC using the external ID and ARN - Step 3
@@ -86,11 +76,6 @@ response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Autho
 AWSAccountId=$(jq -r '.data.attributes["awsaccount-id"]' <<<"${response}")
 CCAccountId=$(jq -r '.data.id' <<<"${response}")
 CCOrganisationId=$(jq -r '.data.relationships.organisation.data.id' <<<"${response}")
-
-# if either of AWSAccountID, CCAcountID or CCOrganisationID is empty stop
-# if [[ "${AWSAccountId}" = "" ]]; then
-# echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAccountId}, Organization ID ${CCOrganisationId}."
-# fi
 
 echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAccountId}, Organization ID ${CCOrganisationId}."
 
