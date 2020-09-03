@@ -25,6 +25,8 @@ AWSNamedProfile="$3"
 # Name and environment to be used in CC to identify the account
 AccountName="$4"
 Environment="$5"
+ConformityAccountId="$6"
+ConformityRTMAccountId="$7"
 
 # initial set up
 StackId=""
@@ -51,7 +53,7 @@ export AWS_PROFILE=${AWSNamedProfile}
 
 # Configure the account - Option2. See https://github.com/cloudconformity/documentation-api/blob/master/Accounts.md#create-an-account
 echo "Creating the Cloud Conformity stack."
-response=$(aws cloudformation create-stack --stack-name CloudConformity --template-url https://s3-us-west-2.amazonaws.com/cloudconformity/CloudConformity.template --parameters ParameterKey=AccountId,ParameterValue=717210094962 ParameterKey=ExternalId,ParameterValue=${ExternalId} --capabilities CAPABILITY_NAMED_IAM)
+response=$(aws cloudformation create-stack --stack-name CloudConformity --template-url https://s3-us-west-2.amazonaws.com/cloudconformity/CloudConformity.template --parameters ParameterKey=AccountId,ParameterValue=${ConformityAccountId} ParameterKey=ExternalId,ParameterValue=${ExternalId} --capabilities CAPABILITY_NAMED_IAM)
 StackId=$(jq -r '.StackId' <<<"${response}")
 
 # wait until the CloudConformity cloudformation is provisioned
@@ -82,7 +84,6 @@ echo "Added AWS Account ${AWSAccountId} under Cloud Conformity Account ID ${CCAc
 echo "Enabling real-time monitoring."
 # Enable RTM in the account. See https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
 TEMPLATE_URL=https://s3-us-west-2.amazonaws.com/cloud-conformity-public-staging-us-west-2/monitoring/event-bus-template.yml
-CC_ACCOUNT_ID=105579776292
 EVENT_BUS_SOURCES=aws.s3\,aws.ec2\,aws.elasticloadbalancing\,aws.autoscaling\,aws.cloudformation\,aws.iam\,aws.dynamodb\,aws.rds\,aws.lambda\,aws.cloudfront\,aws.organizations\,aws.config\,aws.guardduty\,aws.cloudtrail\,aws.route53domains\,aws.kms\,aws.route53\,aws.sts\,aws.ecs\,aws.securityhub\,aws.signin\,aws.macie
 RTM_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ap-south-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-northeast-1 eu-central-1 eu-west-1 eu-west-2 eu-west-3 eu-north-1 sa-east-1 ca-central-1 me-south-1 ap-east-1 af-south-1 eu-south-1 )
 CLASSIC_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ap-south-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-northeast-1 eu-central-1 eu-west-1 eu-west-2 eu-west-3 eu-north-1 sa-east-1 ca-central-1 )
@@ -115,27 +116,27 @@ for region in "${RTM_REGIONS[@]}"; do
       aws cloudformation update-stack \
         --stack-name $STACK_NAME \
         --parameters \
-        ParameterKey=CloudConformityAccountId,ParameterValue="$CC_ACCOUNT_ID" \
+        ParameterKey=CloudConformityAccountId,ParameterValue="${ConformityRTMAccountId}" \
         ParameterKey=EventBusSources,ParameterValue=\"$EVENT_BUS_SOURCES\" \
         --region "$region" \
         --template-url "$TEMPLATE_URL" \
         --capabilities CAPABILITY_IAM \
         --tags \
-        Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date)" &&
+        Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date +%F)" &&
         echo "Successfully updated $STACK_NAME in $region"
     else
       echo "Installing $STACK_NAME - V$STACK_VERSION in $region"
       aws cloudformation create-stack \
         --stack-name $STACK_NAME \
         --parameters \
-        ParameterKey=CloudConformityAccountId,ParameterValue="$CC_ACCOUNT_ID" \
+        ParameterKey=CloudConformityAccountId,ParameterValue="${ConformityRTMAccountId}" \
         ParameterKey=EventBusSources,ParameterValue=\"$EVENT_BUS_SOURCES\" \
         --region "$region" \
         --template-url "$TEMPLATE_URL" \
         --on-failure DO_NOTHING \
         --capabilities CAPABILITY_IAM \
         --tags \
-        Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date)" &&
+        Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date +%F)" &&
         echo "Successfully installed $STACK_NAME in $region"
     fi
   else
