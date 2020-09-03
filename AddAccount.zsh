@@ -1,7 +1,7 @@
 # Adds an AWS Account to Cloud Conformity with the following charasterictics:
 #   Name: $AccountName
 #   Environment: $Environment
-#   Cost Optimisation: Enabled by default
+#   Cost Package: Disabled by default (Legacy functionality)
 #   Real-time monitoring: Enabled and configured by default
 #   Cloud Conformity Endpoint: Endpoint for the given $CCEndpointRegion
 #
@@ -70,7 +70,7 @@ echo "The ARN is ${ARN}."
 
 # Add the account to CC using the external ID and ARN - Step 3
 echo "Adding the account to Cloud Conformity."
-payload="{\"data\":{\"type\": \"account\",\"attributes\": {\"name\": \"${AccountName}\",\"environment\": \"${Environment}\",\"access\": {\"keys\": {\"roleArn\": \"${ARN}\",\"externalId\": \"${ExternalId}\"}},\"costPackage\": true,\"hasRealTimeMonitoring\": true}}}"
+payload="{\"data\":{\"type\": \"account\",\"attributes\": {\"name\": \"${AccountName}\",\"environment\": \"${Environment}\",\"access\": {\"keys\": {\"roleArn\": \"${ARN}\",\"externalId\": \"${ExternalId}\"}},\"costPackage\": false,\"hasRealTimeMonitoring\": true}}}"
 response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" -d ''${payload}'' https://${CCEndpointRegion}-api.cloudconformity.com/v1/accounts)
 
 AWSAccountId=$(jq -r '.data.attributes["awsaccount-id"]' <<<"${response}")
@@ -83,10 +83,17 @@ echo "Enabling real-time monitoring."
 # Enable RTM in the account. See https://cloudconformity.atlassian.net/wiki/spaces/HELP/pages/66256941/Real-Time+Threat+Monitoring+settings
 TEMPLATE_URL=https://s3-us-west-2.amazonaws.com/cloud-conformity-public-staging-us-west-2/monitoring/event-bus-template.yml
 CC_ACCOUNT_ID=105579776292
-RTM_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ca-central-1 eu-west-1 eu-central-1 eu-west-2 eu-west-3 eu-north-1 ap-northeast-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-south-1 sa-east-1 ap-east-1 me-south-1 )
-CLASSIC_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ca-central-1 eu-west-1 eu-central-1 eu-west-2 eu-west-3 eu-north-1 ap-northeast-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-south-1 sa-east-1 )
+EVENT_BUS_SOURCES=aws.s3\,aws.ec2\,aws.elasticloadbalancing\,aws.autoscaling\,aws.cloudformation\,aws.iam\,aws.dynamodb\,aws.rds\,aws.lambda\,aws.cloudfront\,aws.organizations\,aws.config\,aws.guardduty\,aws.cloudtrail\,aws.route53domains\,aws.kms\,aws.route53\,aws.sts\,aws.ecs\,aws.securityhub\,aws.signin\,aws.macie
+RTM_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ap-south-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-northeast-1 eu-central-1 eu-west-1 eu-west-2 eu-west-3 eu-north-1 sa-east-1 ca-central-1 me-south-1 ap-east-1 af-south-1 eu-south-1 )
+CLASSIC_REGIONS=( us-east-1 us-east-2 us-west-1 us-west-2 ap-south-1 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-northeast-1 eu-central-1 eu-west-1 eu-west-2 eu-west-3 eu-north-1 sa-east-1 ca-central-1 )
 STACK_NAME=CloudConformityMonitoring
-STACK_VERSION=5
+STACK_VERSION=6
+
+# Checks whether aws command exists - exit if not
+if ! command -v aws >/dev/null 2>&1; then
+  echo "Please install AWS Command Line Interface first: http://docs.aws.amazon.com/cli/latest/userguide/installing.html"
+  exit 1
+fi
 
 function is_region_enabled()
 {
@@ -109,30 +116,33 @@ for region in "${RTM_REGIONS[@]}"; do
         --stack-name $STACK_NAME \
         --parameters \
         ParameterKey=CloudConformityAccountId,ParameterValue="$CC_ACCOUNT_ID" \
+        ParameterKey=EventBusSources,ParameterValue=\"$EVENT_BUS_SOURCES\" \
         --region "$region" \
         --template-url "$TEMPLATE_URL" \
         --capabilities CAPABILITY_IAM \
         --tags \
         Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date)" &&
-        echo "Successfully updated $STACK_NAME in $region."
+        echo "Successfully updated $STACK_NAME in $region"
     else
       echo "Installing $STACK_NAME - V$STACK_VERSION in $region"
       aws cloudformation create-stack \
         --stack-name $STACK_NAME \
         --parameters \
         ParameterKey=CloudConformityAccountId,ParameterValue="$CC_ACCOUNT_ID" \
+        ParameterKey=EventBusSources,ParameterValue=\"$EVENT_BUS_SOURCES\" \
         --region "$region" \
         --template-url "$TEMPLATE_URL" \
         --on-failure DO_NOTHING \
         --capabilities CAPABILITY_IAM \
         --tags \
         Key=Version,Value=$STACK_VERSION Key=LastUpdatedTime,Value="$(date)" &&
-        echo "Successfully installed $STACK_NAME in $region."
+        echo "Successfully installed $STACK_NAME in $region"
     fi
   else
     echo "Region $region is either not enabled or not supported with the current access credentials"
   fi
 done
+
 echo "Scanning the account."
 response=$(curl -s -X POST -H "Content-Type: application/vnd.api+json" -H "Authorization: ApiKey ${CCAPIKey}" https://${CCEndpointRegion}-api.cloudconformity.com/v1/accounts/${CCAccountId}/scan)
 
