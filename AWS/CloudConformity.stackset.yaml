@@ -1,0 +1,14 @@
+StackSetName: 'CloudConformityStackSet'  
+Description: 'This stackset creates necessary resources to grant access to Cloud Conformity accross all accounts'
+TemplateURL: 'https://s3-us-west-2.amazonaws.com/cloud-conformity-public-staging-us-west-2/CloudConformity.template' 
+Parameters: 
+- ParameterKey: 'AccountId'
+  ParameterValue: '' 
+- ParameterKey: 'ExternalId'
+  ParameterValue: ''
+Capabilities:
+  - CAPABILITY_NAMED_IAM
+PermissionModel: SERVICE_MANAGED 
+AutoDeployment: 
+  Enabled: true  
+  RetainStacksOnAccountRemoval: false

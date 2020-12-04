@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloud Conformity Monitoring Stack
+Parameters:
+  ConformityRTMAccountId:
+    Description: "The Cloud Conformity account Id"
+    Type: String
+Resources:
+  CloudConformityMonitoring:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Name: CloudConformityMonitoring
+      Description: CloudConformityMonitoring
+      EventPattern:
+        account:
+          - !Ref "AWS::AccountId"
+        source:
+          - aws.s3
+          - aws.ec2
+          - aws.elasticloadbalancing
+          - aws.autoscaling
+          - aws.cloudformation
+          - aws.iam
+          - aws.dynamodb
+          - aws.rds
+          - aws.lambda
+          - aws.cloudfront
+          - aws.organizations
+          - aws.config
+          - aws.guardduty
+          - aws.cloudtrail
+          - aws.route53domains
+          - aws.kms
+          - aws.route53
+          - aws.sts
+          - aws.ecs
+          - aws.securityhub
+          - aws.signin
+          - aws.macie
+      State: ENABLED
+      Targets:
+         - Arn: !Join
+            - ":"
+            - - "arn:aws:events"
+              - !Ref "AWS::Region"
+              - !Ref ConformityRTMAccountId
+              - "event-bus/default"
+           Id: "CloudConformityBus"
+

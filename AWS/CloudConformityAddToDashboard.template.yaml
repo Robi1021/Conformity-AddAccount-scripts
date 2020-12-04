@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Adds the account to the dashboard upon sucessful creation of the Conformity Custom Policy
+Parameters:
+  CloudConformityAccountId:
+    Description: "The Cloud Conformity account Id"
+    Type: String
+  APISecret:
+    Description: "The Conformity API Secret"
+    Type: String
+Resources:
+  APISecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: API Secret for authenticating to the Conformity API
+      Name: CCAPISecret
+      SecretString:
+        Ref: APISecret
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: 
+      Policies:
+        - 
+         PolicyName: "root"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+              - 
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+  Trigger:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Name: TriggerAddToDashboard
+      EventPattern:
+        TODO
+      State: ENABLED
+      Targets:
+        - Ref: AddToDashboard
+  AddToDashboard:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Role:
+        Ref: IAMRole
+      Handler: index.handler
+      TracingConfig:
+        Mode: Active
+      Code: Code
