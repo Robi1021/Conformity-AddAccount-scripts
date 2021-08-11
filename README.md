@@ -23,6 +23,10 @@ zsh AddAccount.zsh <CCAPISecret> <CCEndpointRegion> <AWSNamedProfile> <AccountNa
     AccountName: Name that will be used to identify the account in Cloud Conformity
 
     Environment: Environment Tag.
+    
+    Conformity Account ID: Can be found in the Dashboard
+
+    Conformity RTM Account ID: Can be found in the Dashboard
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
