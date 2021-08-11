@@ -6,19 +6,17 @@ import json
 parser = argparse.ArgumentParser(
     description='Adds an AWS account to Conformity.')
 parser.add_argument('--region', type=str, required=True, choices=[
-                    'eu-west-1', 'ap-southeast-2', 'us-west-2'], help='Conformity service region')
+                    'eu-west-1', 'ap-southeast-2', 'us-west-2'], help='Conformity Service Region')
 parser.add_argument('--apiKey', type=str, required=True,
                     help='Conformity API Key')
-parser.add_argument('--roleArn', type=str, required=True,
-                    help='AWS Conformity Role ARN')
-parser.add_argument('--externalId', type=str, required=True,
-                    help='Conformity External Id')
+parser.add_argument('--subscriptionId', type=str,
+                    required=True, help='Azure Subscription Id')
+parser.add_argument('--directoryId', type=str, required=True,
+                    help='Azure Active Directory Id')
 parser.add_argument('--accountName', type=str,
                     required=True, help='Account Name')
 parser.add_argument('--environment', type=str,
                     required=True, help='Environment')
-parser.add_argument('--subscriptionType', type=str, required=True,
-                    choices=['essentials', 'advanced'], help='essentials or advanced')
 args = parser.parse_args()
 
 header = {
@@ -33,18 +31,15 @@ payload = {
             "name": "{}".format(args.accountName),
             "environment": "{}".format(args.environment),
             "access": {
-                "keys": {
-                    "roleArn": "{}".format(args.roleArn),
-                    "externalId": "{}".format(args.externalId)
-                }
+                    "subscriptionId": "{}".format(args.subscriptionId),
+                    "activeDirectoryId": "{}".format(args.directoryId)
             },
-            "costPackage": False,
-            "subscriptionType": "{}".format(args.subscriptionType.lower())
+            "costPackage": False
         }
     }
 }
 
-conformityEndpoint = "https://{}-api.cloudconformity.com/v1/accounts".format(
+conformityEndpoint = "https://{}-api.cloudconformity.com/v1/accounts/azure".format(
     args.region)
 
 response = requests.post(url=conformityEndpoint, json=payload, headers=header)
