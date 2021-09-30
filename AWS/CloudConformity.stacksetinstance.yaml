@@ -1,9 +1,0 @@
-StackSetName: "CloudConformityStackSet"
-DeploymentTargets:
-  OrganizationalUnitIds:
-  - ""
-Regions:
-  - ""
-OperationPreferences:
-  FailureTolerancePercentage: 0
-  MaxConcurrentPercentage: 100

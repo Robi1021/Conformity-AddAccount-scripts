@@ -1,13 +1,12 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  Cloud Conformity Monitoring Stack
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Cloud Conformity Monitoring Stack
 Parameters:
   ConformityRTMAccountId:
     Description: "The Cloud Conformity account Id"
     Type: String
 Resources:
   CloudConformityMonitoring:
-    Type: "AWS::Events::Rule"
+    Type: AWS::Events::Rule
     Properties:
       Name: CloudConformityMonitoring
       Description: CloudConformityMonitoring
@@ -39,11 +38,10 @@ Resources:
           - aws.macie
       State: ENABLED
       Targets:
-         - Arn: !Join
+        - Arn: !Join
             - ":"
             - - "arn:aws:events"
               - !Ref "AWS::Region"
               - !Ref ConformityRTMAccountId
               - "event-bus/default"
-           Id: "CloudConformityBus"
-
+          Id: "CloudConformityBus"
