@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Adds an account to the Conformity Dashboard
+Resources:
+  OnAccountCreatedKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Used by Conformity for adding accounts to the dashboard
+      Enabled: true
+      EnableKeyRotation: true
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      PendingWindowInDays: 7
+      Tags:
+        - Key: name
+          Value: ConformityAddAccount
+  OnAccountCreatedTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: OnAccountCreatedTopic
+      FifoTopic: true
+      KMSMasterKeyId: !Ref OnAccountCreatedKey
