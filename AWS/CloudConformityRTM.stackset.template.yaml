@@ -1,13 +1,16 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Run a stackset that adds Conformity RTM to the target account
+Description: Run a stackset that adds Conformity RTM to the target account(s) or AWS Organizations OU
 Parameters:
   conformityRTMAccountId:
-    Description: Cloud Conformity RTM AWS Account Id used for RTM
+    Description: Cloud Conformity RTM AWS Account Id
     Type: String
     Default: ""
-  awsAccountId:
-    Description: "Account to be monitored"
+  awsAccountIds:
+    Description: "Account(s) to be monitored"
     Type: String
+    Default: ""
+  awsOrgId:
+    Description: "AWS Organizations OU Id to target"
     Default: ""
 Resources:
   conformityRTMStackset:

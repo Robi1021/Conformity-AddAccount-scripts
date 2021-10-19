@@ -1,1 +1,65 @@
 ### TODO #1
+AWSTemplateFormatVersion: 2010-09-09
+Description: Run a stackset that adds Conformity to the target account(s) or AWS Organizations OU
+Parameters:
+  ConformityAccountId:
+    Description: Conformity AWS Account Id
+    Type: String
+    Default: ""
+  ConformityExternalId:
+    Description: Conformity External Id used to address and prevent the 'confused deputy' problem
+    Type: String
+    Default: ""
+  AWSAccountIds:
+    Description: "Account Id(s) on which to install Conformity."
+    Type: CommaDelimitedList
+    Default: ""
+  AWSOrgIds:
+    Description: "AWS Organizations OU Id(s) to target."
+    Type: CommaDelimitedList
+    Default: ""
+Conditions:
+  ProvidedAWSAccounts: !Not
+    - !Equals
+      - !Ref AWSAccountIds
+      - ""
+  ProvidedOrgIds: !Not
+    - !Equals
+      - !Ref AWSOrgIds
+      - ""
+Resources:
+  conformityStackset:
+    Type: AWS::CloudFormation::StackSet
+    Properties:
+      StackSetName: "CloudConformity"
+      Description: "Cloud Conformity (Stackset installation)"
+      TemplateURL: https://s3-us-west-2.amazonaws.com/cloudconformity/CloudConformity.template
+      PermissionModel: SERVICE_MANAGED
+      Capabilities:
+        - CAPABILITY_NAMED_IAM
+      AutoDeployment:
+        Enabled: true
+        RetainStacksOnAccountRemoval: false
+      OperationPreferences:
+        FailureTolerancePercentage: 100
+        MaxConcurrentPercentage: 100
+        RegionConcurrencyType: PARALLEL
+      StackInstancesGroup:
+        - DeploymentTargets:
+            Accounts:
+              - !Ref AWSAccountIds
+            OrganizationalUnitIds:
+            Condition: ProvidedOrgIds
+              - !Ref AWSOrgIds
+            Regions:
+              - us-east-1
+      Parameters:
+        - ParameterKey: AccountId
+          ParameterValue: !Ref ConformityAccountId
+        - ParameterKey: ExternalId
+          ParameterValue: !Ref ConformityExternalId
+      Tags:
+        - Key: Name
+          Value: Cloud Conformity (Stackset)
+        - Key: Version
+          Value: 1
